@@ -14,7 +14,7 @@ images = './cancer_data/'
 
 
 
-def next_batch(batch):
+def next_batch(batch, train=True):
     output = []
     output.append([])
     output.append([])
@@ -28,9 +28,12 @@ def next_batch(batch):
         #print type_image
         #print images + type_image + '*.png'
         #print glob.glob(images i+'/inputs/'+ type_image + '*.png')
-        image = random.choice(glob.glob(images +'inputs/' + type_image + '*.png' ))
-        #print image
-        #print ntpath.basename(image)
+        if train:
+            image = random.choice(glob.glob(images +'inputs/' + type_image + '_train' + '*.png' ))
+        else:
+            image = random.choice(glob.glob(images +'inputs/' + type_image + '_test' + '*.png' ))
+        print image
+        print ntpath.basename(image)
     
 
         img_in = np.array(Image.open(image).resize((512,512)))

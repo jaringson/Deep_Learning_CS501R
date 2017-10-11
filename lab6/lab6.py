@@ -21,16 +21,16 @@ def max_pool_2x2(x):
 def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose=False, name="conv" ):
     
     with tf.name_scope(name) as scope:
+        x_shape = x.get_shape().as_list()
         #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
-        W = tf.Variable( 1e-3*np.random.randn(filter_size, filter_size, x.get_shape().as_list()[3], num_filters).astype(np.float32))
+        W = tf.Variable( 1e-3*np.random.randn(filter_size, filter_size, x_shape[3], num_filters).astype(np.float32))
         b = bias_variable([num_filters])
         h = []
         
-        x_shape = x.get_shape().as_list()
 
         if not is_output:
             if  transpose:
-                h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, out_shape=[x_shape[0],x_shape[1]*2,x_shape[2]*2,x_shape[3]],strides=[1,stride,stride,1], padding='VALID') + b)
+                h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[-1,x_shape[1]*2,x_shape[2]*2,x_shape[3]],strides=[1,stride,stride,1], padding='SAME') + b)
             else:
                 h = tf.nn.relu(tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID') + b)
         else:
@@ -51,7 +51,7 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
         return h
 
 x_image = tf.placeholder(tf.float32, shape=[None, 512,512,3], name="images")
-label_ = tf.placeholder(tf.float32, shape=[None, 10])
+label_ = tf.placeholder(tf.float32, shape=[None, 494,494,1])
 keep_prob = tf.placeholder(tf.float32)
 
 #x_image = tf.reshape(x, [-1,512,512,3])
@@ -72,16 +72,34 @@ with tf.name_scope('down2') as scope:
     l2_h2 = conv(l2_h1,num_filters=128)
     print l2_h2.get_shape()
 
-with tf.name_scope('up2') as scope:
-    #crop_l2_h2 = tf.map_fn(lambda img: tf.image.crop_to_bounding_box(img,0,0,249,249 ),l2_h2, parallel_iterations=batch_size, name="crop1") 
-    #print crop_l2_h2.get_shape()
-    d2_h0 = conv(l2_h2,filter_size=2,transpose=True)
-    print d2_h0.shape
-    shape = l2_h2.get_shape().as_list()
-    flat = tf.reshape(l2_h2,[-1,shape[1]*shape[2]*shape[3]])
-    fc2 = fc(flat,out_size=10,is_output=True)
+with tf.name_scope('up1') as scope:
+    d1 = conv(l2_h2,filter_size=2,num_filters=l2_h2.get_shape().as_list()[3],transpose=True)
+    print d1.get_shape()
 
-label_conv = tf.nn.softmax(fc2)
+    out_shape = d1.get_shape().as_list()
+    in_shape = l1_h2.get_shape().as_list()
+    side = (in_shape[1]/2)-(out_shape[1]/2)
+
+
+    crop_l1_h2 = tf.map_fn(lambda img: tf.image.crop_to_bounding_box(img,side,side,out_shape[1],out_shape[1] ),l1_h2, name="crop1") 
+    print crop_l1_h2.get_shape()
+    
+    d1_h0 = tf.concat([d1,crop_l1_h2],3)
+    print d1_h0.get_shape()
+
+    d1_h1 = conv(d1_h0)
+    drop = tf.nn.dropout(d1_h1, keep_prob)
+    print drop.get_shape()
+    d1_h2 = conv(drop,is_output=True,num_filters=1)
+    print d1_h2.get_shape()
+
+
+
+    #shape = l2_h2.get_shape().as_list()
+    #flat = tf.reshape(l2_h2,[-1,shape[1]*shape[2]*shape[3]])
+    #fc2 = fc(flat,out_size=10,is_output=True)
+
+label_conv = tf.nn.softmax(d1_h2)
 
 with tf.name_scope('Cost') as scope:
     cross_entropy = tf.reduce_mean(-tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1]))
@@ -99,7 +117,7 @@ cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 merged_summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter("./tf_logs2",graph=sess.graph)
 
-sess.run(tf.global_variables_initializer())
+#sess.run(tf.global_variables_initializer())
 
 NUM_EPOCHS = 0
 place = 0
