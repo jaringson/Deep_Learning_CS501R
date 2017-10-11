@@ -51,7 +51,7 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
         return h
 
 x_image = tf.placeholder(tf.float32, shape=[None, 512,512,3], name="images")
-label_ = tf.placeholder(tf.float32, shape=[None, 494,494,1])
+label_ = tf.placeholder(tf.float32, shape=[None, 512,512,2])
 keep_prob = tf.placeholder(tf.float32)
 
 #x_image = tf.reshape(x, [-1,512,512,3])
@@ -127,15 +127,16 @@ test_place = 0
 for i in range(NUM_EPOCHS):
     	
     batch = batch_utils.next_batch(batch_size)
-    print np.array(batch[0]).shape
+    #print np.array(batch[0]).shape
 
     train_step.run(feed_dict={x_image:batch[0], label_:np.zeros((1,10)), keep_prob:.5})
      
+    if i % 100 == 0:
+        batch = batch_utils.next_batch(batch_size,
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x:test_batch[0], label_:test_batch[1], keep_prob:.5})
     
-    #summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x:test_batch[0], label_:test_batch[1], keep_prob:.5})
-    
-    #print("%d, %g"%(i,l))
-    #summary_writer.add_summary(summary_str,i)
+        print("%d, %g"%(i,l))
+    summary_writer.add_summary(summary_str,i)
 summary_writer.close()
 
 
