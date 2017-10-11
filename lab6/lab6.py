@@ -32,9 +32,9 @@ def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose
             if  transpose:
                 h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[-1,x_shape[1]*2,x_shape[2]*2,x_shape[3]],strides=[1,stride,stride,1], padding='SAME') + b)
             else:
-                h = tf.nn.relu(tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID') + b)
+                h = tf.nn.relu(tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b)
         else:
-            h = tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='VALID') + b
+            h = tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b
         return h
 
 
@@ -90,7 +90,7 @@ with tf.name_scope('up1') as scope:
     d1_h1 = conv(d1_h0)
     drop = tf.nn.dropout(d1_h1, keep_prob)
     print drop.get_shape()
-    d1_h2 = conv(drop,is_output=True,num_filters=1)
+    d1_h2 = conv(drop,is_output=True,num_filters=2)
     print d1_h2.get_shape()
 
 

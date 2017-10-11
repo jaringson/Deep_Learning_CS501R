@@ -6,9 +6,11 @@ import random
 import time
 from PIL import Image
 import numpy as np
-from scipy.misc import imread, imresize, imsave, imshow
+#from scipy.misc import imread, imresize, imsave, imshow
 import ntpath
-
+#import skimage
+from skimage.transform import resize
+from skimage.io import imread
 
 images = './cancer_data/'
 
@@ -32,16 +34,23 @@ def next_batch(batch, train=True):
             image = random.choice(glob.glob(images +'inputs/' + type_image + '_train' + '*.png' ))
         else:
             image = random.choice(glob.glob(images +'inputs/' + type_image + '_test' + '*.png' ))
-        print image
-        print ntpath.basename(image)
+        #print image
+        #print ntpath.basename(image)
     
 
-        img_in = np.array(Image.open(image).resize((512,512)))
-        img_out = np.array(Image.open(images+'outputs/'+ntpath.basename(image)).resize((512,512)))
+        img_in = imread(image)#np.array(Image.open(image).resize((512,512)))
+        img_out = imread(images+'outputs/'+ntpath.basename(image))#Image.open(images+'outputs/'+ntpath.basename(image)).resize((512,512))
+        #img_out = img_out.convert('L')
+        #img_out = np.array(img_out)
+        img_out = resize(img_out, (512,512))
+        
 
-        #print img_in.shape
-        #print img_out.shape
+        #print img_in.tolist()
+        print np.concimg_out.astype(int)
+        print (np.invert(img_out.astype(int)) + 2).tolist()[0]
 
+
+        
         output[0].append(img_in.tolist())
         output[1].append(img_out.tolist())
 
@@ -49,7 +58,7 @@ def next_batch(batch, train=True):
 
 
 if __name__ == '__main__':
-    num = 10
+    num = 1
     b = next_batch(num)
     #print len(b[0]), len(b[1])
     #for i in range(num):
