@@ -124,7 +124,7 @@ save_dir = "tf_logs"
 
 
 saver = tf.train.Saver()
-saver.restore(sess, "script/tf_logs/lab6.ckpt")
+saver.restore(sess, "./tf_logs/lab6.ckpt")
 print("Whole model restored")
 
 img = np.array(Image.open('./cancer_data/input/pos_test_000072.png'))
