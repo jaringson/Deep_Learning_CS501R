@@ -5,7 +5,7 @@ import batch_utils
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
 
-batch_size = 1
+batch_size = 25
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.2)
@@ -16,7 +16,7 @@ def bias_variable(shape):
   return tf.Variable(initial)
 
 def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose=False, name="conv" ):
     
@@ -30,7 +30,7 @@ def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose
 
         if not is_output:
             if  transpose:
-                h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[-1,x_shape[1]*2,x_shape[2]*2,x_shape[3]],strides=[1,stride,stride,1], padding='SAME') + b)
+                h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[batch_size ,x_shape[1]*2 ,x_shape[2]*2 ,x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b)
             else:
                 h = tf.nn.relu(tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b)
         else:
@@ -50,30 +50,30 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
             h = tf.matmul(x,W)+b
         return h
 
-x_image = tf.placeholder(tf.float32, shape=[None, 512,512,3], name="images")
-label_ = tf.placeholder(tf.float32, shape=[None, 512,512,2])
+x_image = tf.placeholder(tf.float32, shape=[batch_size, 512/2,512/2,3], name="images")
+label_ = tf.placeholder(tf.float32, shape=[batch_size, 512/2,512/2,2])
 keep_prob = tf.placeholder(tf.float32)
 
 #x_image = tf.reshape(x, [-1,512,512,3])
 
 with tf.name_scope('down1') as scope:
-    l1_h0 = conv(x_image)
+    l1_h0 = conv(x_image,num_filters=32)
     print l1_h0.get_shape()
-    l1_h1 = conv(l1_h0)
+    l1_h1 = conv(l1_h0,num_filters=32)
     print l1_h1.get_shape()
-    l1_h2 = conv(l1_h1)
+    l1_h2 = conv(l1_h1,num_filters= 32)
     print l1_h2.get_shape()
 
 with tf.name_scope('down2') as scope:
     l2_h0 = max_pool_2x2(l1_h2)
     print l2_h0.get_shape()
-    l2_h1 = conv(l2_h0,num_filters=128)
+    l2_h1 = conv(l2_h0,num_filters=32)
     print l2_h1.get_shape()
-    l2_h2 = conv(l2_h1,num_filters=128)
+    l2_h2 = conv(l2_h1,num_filters=32)
     print l2_h2.get_shape()
 
 with tf.name_scope('up1') as scope:
-    d1 = conv(l2_h2,filter_size=2,num_filters=l2_h2.get_shape().as_list()[3],transpose=True)
+    d1 = conv(l2_h2,filter_size=3, num_filters=l2_h2.get_shape().as_list()[3], transpose=True, stride=2)
     print d1.get_shape()
 
     out_shape = d1.get_shape().as_list()
@@ -87,7 +87,7 @@ with tf.name_scope('up1') as scope:
     d1_h0 = tf.concat([d1,crop_l1_h2],3)
     print d1_h0.get_shape()
 
-    d1_h1 = conv(d1_h0)
+    d1_h1 = conv(d1_h0,num_filters=64)
     drop = tf.nn.dropout(d1_h1, keep_prob)
     print drop.get_shape()
     d1_h2 = conv(drop,is_output=True,num_filters=2)
@@ -102,8 +102,9 @@ with tf.name_scope('up1') as scope:
 label_conv = tf.nn.softmax(d1_h2)
 
 with tf.name_scope('Cost') as scope:
-    cross_entropy = tf.reduce_mean(-tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1]))
-    
+    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1])
+    cross_entropy =  tf.reduce_mean(cross_entropy) 
+ 
 with tf.name_scope('Accuracy') as scope:
     correct_prediction = tf.equal(tf.argmax(label_conv,1), tf.argmax(label_,1))
     label_acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -115,29 +116,41 @@ acc_summary = tf.summary.scalar( 'Accuracy', label_acc )
 cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 
 merged_summary_op = tf.summary.merge_all()
-summary_writer = tf.summary.FileWriter("./tf_logs2",graph=sess.graph)
 
-#sess.run(tf.global_variables_initializer())
+save_dir = "tf_logs"
 
-NUM_EPOCHS = 0
-place = 0
-test_place = 0
+summary_writer = tf.summary.FileWriter("./"+ save_dir + "/train",graph=sess.graph)
+validate_writer = tf.summary.FileWriter("./"+ save_dir +"/validate")
+
+saver = tf.train.Saver()
+
+sess.run(tf.global_variables_initializer())
+
+NUM_EPOCHS = 1000
 
 
 for i in range(NUM_EPOCHS):
     	
     batch = batch_utils.next_batch(batch_size)
-    #print np.array(batch[0]).shape
 
-    train_step.run(feed_dict={x_image:batch[0], label_:np.zeros((1,10)), keep_prob:.5})
+    train_step.run(feed_dict={x_image:batch[0], label_:batch[1], keep_prob:.75})
      
-    if i % 100 == 0:
-        batch = batch_utils.next_batch(batch_size,
-        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x:test_batch[0], label_:test_batch[1], keep_prob:.5})
+    if i % 10 == 0:
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :batch[0], label_:batch[1], keep_prob:.5})
     
-        print("%d, %g"%(i,l))
-    summary_writer.add_summary(summary_str,i)
-summary_writer.close()
+        print("Train: %d, %g"%(i,l))
+    	summary_writer.add_summary(summary_str,i)
+	
+    if i % 100 == 0:
+        test_batch = batch_utils.next_batch(batch_size,train=False)
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :test_batch[0], label_:test_batch[1], keep_prob:.75})
+        
+        print("Test: %d, %g"%(i,l))
+    	validate_writer.add_summary(summary_str,i)
 
+saver.save(sess, save_dir+"/lab6.ckpt")
+
+summary_writer.close()
+validate_write.close()
 
 
