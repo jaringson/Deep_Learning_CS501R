@@ -1,6 +1,6 @@
 import numpy as np 
 import tensorflow as tf
-import PIL as Image
+from PIL import Image
 
 #tf.reset_default_graph()
 
@@ -127,11 +127,27 @@ saver = tf.train.Saver()
 saver.restore(sess, "./tf_logs/lab6.ckpt")
 print("Whole model restored")
 
-img = np.array(Image.open('./cancer_data/input/pos_test_000072.png'))
+
+img = Image.open('./cancer_data/inputs/pos_test_000072.png').resize((512/2,512/2))
+img = np.array(img)
 print img.shape
-img = np.tile(img,(25,1)) 
+img = np.tile(img,(25,1,1,1)) 
 print img.shape
 
 lb = sess.run([label_conv],feed_dict={x_image:img, keep_prob:1.0})
 
-print lb.shape
+print np.array(lb).shape
+im = []
+for i, row in enumerate(lb[0])):
+    im.append([])
+    for j, value in enumerate(row):
+         if value[0] = 1:
+             im[i].append(225)
+         else:
+             im[i].append(0)
+
+im = np.array(im)
+im = im.reshape()
+imsave('./tf_logs/out.png',im)
+
+
