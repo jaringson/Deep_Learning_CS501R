@@ -7,22 +7,22 @@ from scipy.misc import imsave
 
 sess = tf.InteractiveSession()
 
-
 batch_size = 10
+
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.2)
-  return tf.Variable(initial)
+  return tf.Variable(initial, name='W')
 
 def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+  return tf.Variable(initial, name='b')
 
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose=False, name="conv" ):
-    
+    global loss 
     with tf.name_scope(name) as scope:
         x_shape = x.get_shape().as_list()
         #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
@@ -47,7 +47,9 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
         W = tf.Variable( 1e-3*np.random.randn(x.get_shape().as_list()[1], out_size).astype(np.float32))
         b = bias_variable([out_size])
         h = []
-        if not is_output:
+        
+
+	if not is_output:
             h = tf.nn.relu(tf.matmul(x,W)+b)
         else:
             h = tf.matmul(x,W)+b
@@ -60,9 +62,9 @@ keep_prob = tf.placeholder(tf.float32)
 #x_image = tf.reshape(x, [-1,512,512,3])
 
 with tf.name_scope('down1') as scope:
-    l1_h0 = conv(x_image,num_filters= 64)
+    l1_h0 = conv(x_image,num_filters=64)
     print l1_h0.get_shape()
-    l1_h1 = conv(l1_h0,num_filters= 64)
+    l1_h1 = conv(l1_h0,num_filters=64)
     print l1_h1.get_shape()
     l1_h2 = conv(l1_h1,num_filters= 64)
     print l1_h2.get_shape()
@@ -104,12 +106,21 @@ with tf.name_scope('up1') as scope:
 
 label_conv = tf.nn.softmax(d1_h2)
 
+all_w_b = ['down1/conv/Variable:0','down1/conv/b:0', 'down1/conv_1/Variable:0','down1/conv_1/b:0', 'down1/conv_2/Variable:0', 'down1/conv_2/b:0', 'down2/conv/Variable:0','down2/conv/b:0', 'down2/conv_1/Variable:0','down2/conv_1/b:0', 'down2/conv_2/Variable:0', 'up1/conv/Variable:0','up1/conv/b:0', 'up1/conv_1/Variable:0','up1/conv_1/b:0', 'up1/conv_2/Variable:0', 'up1/conv_2/b:0']
+
+loss = tf.Variable(0.0)
+for val in all_w_b:
+	loss += tf.nn.l2_loss([v for v in tf.global_variables() if v.name == val])
+#loss = tf.nn.l2_loss( ) 
+#loss = tf.nn.l2_loss(tf.global_variables())
+
+
 with tf.name_scope('Cost') as scope:
-    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1])
-    cross_entropy =  tf.reduce_mean(cross_entropy) 
+    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), axis=3)
+    cross_entropy =  tf.reduce_mean(tf.reduce_sum(tf.reduce_sum(cross_entropy,axis=2),axis=1)) #+ loss
  
 with tf.name_scope('Accuracy') as scope:
-    correct_prediction = tf.equal(tf.argmax(label_conv,1), tf.argmax(label_,1))
+    correct_prediction = tf.equal(tf.argmax(label_conv,3), tf.argmax(label_,3))
     label_acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
   
 with tf.name_scope('Optimizer') as scope:
@@ -120,7 +131,7 @@ cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 
 merged_summary_op = tf.summary.merge_all()
 
-save_dir = "k"
+save_dir = "l"
 
 
 
