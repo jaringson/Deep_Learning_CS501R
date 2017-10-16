@@ -1,28 +1,26 @@
 import numpy as np 
 import tensorflow as tf
-from PIL import Image
-from scipy.misc import imsave
+import batch_utils
 
-#tf.reset_default_graph()
-
+tf.reset_default_graph()
 sess = tf.InteractiveSession()
-
 
 batch_size = 10
 
+
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.2)
-  return tf.Variable(initial)
+  return tf.Variable(initial, name='W')
 
 def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+  return tf.Variable(initial, name='b')
 
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, transpose=False, name="conv" ):
-    
+    global loss 
     with tf.name_scope(name) as scope:
         x_shape = x.get_shape().as_list()
         #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
@@ -47,7 +45,9 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
         W = tf.Variable( 1e-3*np.random.randn(x.get_shape().as_list()[1], out_size).astype(np.float32))
         b = bias_variable([out_size])
         h = []
-        if not is_output:
+        
+
+	if not is_output:
             h = tf.nn.relu(tf.matmul(x,W)+b)
         else:
             h = tf.matmul(x,W)+b
@@ -60,9 +60,9 @@ keep_prob = tf.placeholder(tf.float32)
 #x_image = tf.reshape(x, [-1,512,512,3])
 
 with tf.name_scope('down1') as scope:
-    l1_h0 = conv(x_image,num_filters= 64)
+    l1_h0 = conv(x_image,num_filters=64)
     print l1_h0.get_shape()
-    l1_h1 = conv(l1_h0,num_filters= 64)
+    l1_h1 = conv(l1_h0,num_filters=64)
     print l1_h1.get_shape()
     l1_h2 = conv(l1_h1,num_filters= 64)
     print l1_h2.get_shape()
@@ -104,12 +104,21 @@ with tf.name_scope('up1') as scope:
 
 label_conv = tf.nn.softmax(d1_h2)
 
+all_w_b = ['down1/conv/Variable:0','down1/conv/b:0', 'down1/conv_1/Variable:0','down1/conv_1/b:0', 'down1/conv_2/Variable:0', 'down1/conv_2/b:0', 'down2/conv/Variable:0','down2/conv/b:0', 'down2/conv_1/Variable:0','down2/conv_1/b:0', 'down2/conv_2/Variable:0', 'up1/conv/Variable:0','up1/conv/b:0', 'up1/conv_1/Variable:0','up1/conv_1/b:0', 'up1/conv_2/Variable:0', 'up1/conv_2/b:0']
+
+loss = tf.Variable(0.0)
+for val in all_w_b:
+	loss += tf.nn.l2_loss([v for v in tf.global_variables() if v.name == val])
+#loss = tf.nn.l2_loss( ) 
+#loss = tf.nn.l2_loss(tf.global_variables())
+
+
 with tf.name_scope('Cost') as scope:
-    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1])
-    cross_entropy =  tf.reduce_mean(cross_entropy) 
+    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), axis=3)
+    cross_entropy =  tf.reduce_mean(tf.reduce_sum(tf.reduce_sum(cross_entropy,axis=2),axis=1)) #+ loss
  
 with tf.name_scope('Accuracy') as scope:
-    correct_prediction = tf.equal(tf.argmax(label_conv,1), tf.argmax(label_,1))
+    correct_prediction = tf.equal(tf.argmax(label_conv,3), tf.argmax(label_,3))
     label_acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
   
 with tf.name_scope('Optimizer') as scope:
@@ -120,36 +129,40 @@ cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 
 merged_summary_op = tf.summary.merge_all()
 
-save_dir = "k"
+save_dir = "l"
 
-
+summary_writer = tf.summary.FileWriter("./"+ save_dir + "/train",graph=sess.graph)
+validate_writer = tf.summary.FileWriter("./"+ save_dir +"/validate")
 
 saver = tf.train.Saver()
-saver.restore(sess, "./"+save_dir+"/lab6.ckpt")
-print("Whole model restored")
+
+sess.run(tf.global_variables_initializer())
+
+NUM_EPOCHS = 1000*2
 
 
-img = Image.open('./cancer_data/inputs/pos_test_000072.png').resize((512/4,512/4))
-img = np.array(img)
-print img.shape
-img = np.tile(img,(batch_size,1,1,1)) 
-print img.shape
+for i in range(NUM_EPOCHS):
+    	
+    batch = batch_utils.next_batch(batch_size)
 
-lb = sess.run([label_conv],feed_dict={x_image:img, keep_prob:1.0})
+    train_step.run(feed_dict={x_image:batch[0], label_:batch[1], keep_prob:.5})
+     
+    if i % 10 == 0:
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :batch[0], label_:batch[1], keep_prob:.5})
+    
+        print("Train: %d, %g"%(i,l))
+    	summary_writer.add_summary(summary_str,i)
+	
+    if i % 100 == 0:
+        test_batch = batch_utils.next_batch(batch_size,train=False)
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :test_batch[0], label_:test_batch[1], keep_prob:.5})
+        
+        print("Test: %d, %g"%(i,l))
+    	validate_writer.add_summary(summary_str,i)
 
-print np.array(lb).shape
-im = []
-print lb[0]
-for i, row in enumerate(lb[0][0]):
-    im.append([])
-    for j, value in enumerate(row):
-         if value[0] > value[1]:
-             im[i].append(225)
-         else:
-             im[i].append(0)
+saver.save(sess, save_dir+"/lab6.ckpt")
 
-im = np.array(im)
-#im = im.reshape()
-imsave('./'+ save_dir +'/out.png',im)
+summary_writer.close()
+validate_write.close()
 
 

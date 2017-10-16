@@ -5,7 +5,7 @@ import batch_utils
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
 
-batch_size = 25
+batch_size = 10
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.2)
@@ -50,26 +50,26 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
             h = tf.matmul(x,W)+b
         return h
 
-x_image = tf.placeholder(tf.float32, shape=[batch_size, 512/2,512/2,3], name="images")
-label_ = tf.placeholder(tf.float32, shape=[batch_size, 512/2,512/2,2])
+x_image = tf.placeholder(tf.float32, shape=[batch_size, 512/4,512/4,3], name="images")
+label_ = tf.placeholder(tf.float32, shape=[batch_size, 512/4,512/4,2])
 keep_prob = tf.placeholder(tf.float32)
 
 #x_image = tf.reshape(x, [-1,512,512,3])
 
 with tf.name_scope('down1') as scope:
-    l1_h0 = conv(x_image,num_filters=32)
+    l1_h0 = conv(x_image,num_filters=64)
     print l1_h0.get_shape()
-    l1_h1 = conv(l1_h0,num_filters=32)
+    l1_h1 = conv(l1_h0,num_filters=64)
     print l1_h1.get_shape()
-    l1_h2 = conv(l1_h1,num_filters= 32)
+    l1_h2 = conv(l1_h1,num_filters= 64)
     print l1_h2.get_shape()
 
 with tf.name_scope('down2') as scope:
     l2_h0 = max_pool_2x2(l1_h2)
     print l2_h0.get_shape()
-    l2_h1 = conv(l2_h0,num_filters=32)
+    l2_h1 = conv(l2_h0,num_filters=128)
     print l2_h1.get_shape()
-    l2_h2 = conv(l2_h1,num_filters=32)
+    l2_h2 = conv(l2_h1,num_filters=128)
     print l2_h2.get_shape()
 
 with tf.name_scope('up1') as scope:
@@ -102,11 +102,11 @@ with tf.name_scope('up1') as scope:
 label_conv = tf.nn.softmax(d1_h2)
 
 with tf.name_scope('Cost') as scope:
-    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), reduction_indices=[1])
-    cross_entropy =  tf.reduce_mean(cross_entropy) 
+    cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), axis=3)
+    cross_entropy =  tf.reduce_mean(tf.reduce_sum(tf.reduce_sum(cross_entropy, axis=2),axis=1)) 
  
 with tf.name_scope('Accuracy') as scope:
-    correct_prediction = tf.equal(tf.argmax(label_conv,1), tf.argmax(label_,1))
+    correct_prediction = tf.equal(tf.argmax(label_conv,3), tf.argmax(label_,3))
     label_acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
   
 with tf.name_scope('Optimizer') as scope:
@@ -117,7 +117,7 @@ cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 
 merged_summary_op = tf.summary.merge_all()
 
-save_dir = "tf_logs"
+save_dir = "j"
 
 summary_writer = tf.summary.FileWriter("./"+ save_dir + "/train",graph=sess.graph)
 validate_writer = tf.summary.FileWriter("./"+ save_dir +"/validate")
@@ -126,14 +126,14 @@ saver = tf.train.Saver()
 
 sess.run(tf.global_variables_initializer())
 
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 1000*2
 
 
 for i in range(NUM_EPOCHS):
     	
     batch = batch_utils.next_batch(batch_size)
 
-    train_step.run(feed_dict={x_image:batch[0], label_:batch[1], keep_prob:.75})
+    train_step.run(feed_dict={x_image:batch[0], label_:batch[1], keep_prob:.5})
      
     if i % 10 == 0:
         summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :batch[0], label_:batch[1], keep_prob:.5})
@@ -143,7 +143,7 @@ for i in range(NUM_EPOCHS):
 	
     if i % 100 == 0:
         test_batch = batch_utils.next_batch(batch_size,train=False)
-        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :test_batch[0], label_:test_batch[1], keep_prob:.75})
+        summary_str,l = sess.run([merged_summary_op, label_acc],feed_dict={x_image :test_batch[0], label_:test_batch[1], keep_prob:.5})
         
         print("Test: %d, %g"%(i,l))
     	validate_writer.add_summary(summary_str,i)

@@ -27,7 +27,7 @@ def next_batch(batch, train=True):
 
     for _ in range(batch):
         type_image = random.choice(choice)
-        
+       	type_image = 'pos' 
         if train:
             image = random.choice(glob.glob(images +'inputs/' + type_image + '_train' + '*.png' ))
         else:
@@ -35,9 +35,9 @@ def next_batch(batch, train=True):
     
         #print image
 
-        img_in = np.array(Image.open(image).resize((512/2,512/2)))
+        img_in = np.array(Image.open(image).resize((512/4,512/4)))
         img_out = imread(images+'outputs/'+ntpath.basename(image))#Image.open(images+'outputs/'+ntpath.basename(image)).resize((512,512))
-        img_out = resize(img_out, (512/2,512/2))
+        img_out = resize(img_out, (512/4,512/4))
         
 
         img_out =  np.stack((img_out.astype(int), (np.invert(img_out.astype(int)) + 2) ),axis=2)
