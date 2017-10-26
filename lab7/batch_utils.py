@@ -35,10 +35,11 @@ def next_batch(batch, train=True):
         right = (width + new_width)/2
         bottom = (height + new_height)/2
 
-        img_in = img_in.crop((left, top, right, bottom)).resize((32,32))
+        img_in = img_in.crop((left, top, right, bottom)).resize((16,16))
         img_in.show()
         img_in = np.array(img_in)
-        
+       	img_in = np.ndarray.flatten(img_in)
+	 
         output[0].append(img_in.tolist())
 
     return output

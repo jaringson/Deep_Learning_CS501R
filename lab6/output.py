@@ -117,7 +117,7 @@ for val in all_w_b:
 
 with tf.name_scope('Cost') as scope:
     cross_entropy = -tf.reduce_sum(label_ * tf.log(tf.clip_by_value(label_conv,1e-10,1)), axis=3)
-    cross_entropy =  tf.reduce_mean(tf.reduce_sum(tf.reduce_sum(cross_entropy,axis=2),axis=1)) #+ loss
+    cross_entropy =  tf.reduce_mean(tf.reduce_sum(tf.reduce_sum(cross_entropy,axis=2),axis=1)) + loss
  
 with tf.name_scope('Accuracy') as scope:
     correct_prediction = tf.equal(tf.argmax(label_conv,3), tf.argmax(label_,3))
@@ -131,7 +131,7 @@ cost_summary = tf.summary.scalar( 'Cost', cross_entropy )
 
 merged_summary_op = tf.summary.merge_all()
 
-save_dir = "l"
+save_dir = "k"
 
 
 

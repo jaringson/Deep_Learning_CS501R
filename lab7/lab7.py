@@ -1,6 +1,6 @@
 import numpy as np 
 import tensorflow as tf
-# import batch_utils
+import batch_utils
 
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
@@ -95,36 +95,39 @@ def Generator(n_samples):
         print G_1.get_shape()
         G_2 = conv_t(G_1,num_filters=512, stride=2)
         print G_2.get_shape()
-
-        G_3 = conv_t(G_2,num_filters=256, stride=2)
+        G_3 = conv_t(G_2,num_filters=3, stride=2)
         print G_3.get_shape()
-        G_4 = conv_t(G_3,num_filters=188, stride=2)
-        print G_4.get_shape()
-        G_5 = conv_t(G_4,num_filters=3, stride=2, is_output=True)
-        print G_5.get_shape()
-        shape = G_5.get_shape().as_list()
-        G_flat = tf.reshape(G_5, [-1,shape[1]*shape[2]*shape[3]])
+        #G_4 = conv_t(G_3,num_filters=188, stride=2)
+        #print G_4.get_shape()
+        #G_5 = conv_t(G_4,num_filters=3, stride=2, is_output=True)
+        #print G_5.get_shape()
+	
+	last = G_3
+        shape = last.get_shape().as_list()
+        G_flat = tf.reshape(last, [-1,shape[1]*shape[2]*shape[3]])
         print G_flat.get_shape()
         return G_flat
 
 def Discriminator(input):
     global d_scope
     with tf.variable_scope('D_model') as d_scope:
-        d_scope.reuse_variables()
         #D_1 = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 64, 64, 3])
-        input = tf.reshape(input, [BATCH_SIZE, 64,64,3])
+        input = tf.reshape(input, [BATCH_SIZE, 16,16,3],'D_reshape')
         print input.get_shape()
-        D_2 = conv(input,num_filters=188,stride=2)
+        D_2 = conv(input,num_filters=188,stride=2,name='D2')
         print D_2.get_shape()
-        D_3 = conv(D_2,num_filters=256,stride=2)
+        D_3 = conv(D_2,num_filters=256,stride=2,name='D3')
         print D_3.get_shape()
-        D_4 = conv(D_3,num_filters=512,stride=2)
-        print D_4.get_shape()
-        D_5 = conv(D_4,num_filters=1024,stride=2)
-        print D_5.get_shape()
-        shape = D_5.get_shape().as_list()
-        D_flat = tf.reshape(D_5,[-1,shape[1]*shape[2]*shape[3]])
-        D_out = fc(D_flat, out_size=1, is_output=True)
+        #D_4 = conv(D_3,num_filters=512,stride=2)
+        #print D_4.get_shape()
+        #D_5 = conv(D_4,num_filters=1024,stride=2)
+        #print D_5.get_shape()
+        
+	last = D_3
+	shape = last.get_shape().as_list()
+        D_flat = tf.reshape(last,[-1,shape[1]*shape[2]*shape[3]])
+        D_out = fc(D_flat, out_size=1, is_output=True,name='D_out')
+        d_scope.reuse_variables()
         print D_out.get_shape()
         return D_out
 
@@ -135,6 +138,8 @@ real_data = tf.placeholder(tf.float32, shape=[BATCH_SIZE, fake_data.get_shape()[
 print '------------------'
 
 disc_fake = Discriminator(fake_data)
+
+with tf.variable_scope(d_scope, reuse=True)
 
 disc_real = Discriminator(real_data)
 
@@ -175,25 +180,26 @@ merged_summary_op = tf.summary.merge_all()
 
 save_dir = "a"
 
-summary_writer = tf.summary.FileWriter("./"+ save_dir + "/train",graph=sess.graph)
+summary_writer = tf.summary.FileWriter("./"+ save_dir,graph=sess.graph)
 
 saver = tf.train.Saver()
 
 sess.run(tf.global_variables_initializer())
 
-NUM_EPOCHS = 10#1000*2
-
+NUM_EPOCHS = 1000*2
+n_critic = 5
 
 for i in range(NUM_EPOCHS):
     batch = []
-    for i in range(n_critic)
+    for i in range(n_critic):
         batch = batch_utils.next_batch(BATCH_SIZE)
 
         disc_train_op.run(feed_dict={real_data:batch[0]})
     gen_train_op.run(feed_dict={real_data:batch[0]})
     if i % 10:
+	print i
         summary_str = sess.run([merged_summary_op],feed_dict={real_data:batch[0]})
-        summary_writer.add_summary(summary_str,i)
+        summary_writer.add_summary(summary_str[0],i)
      
 
 saver.save(sess, save_dir+"/lab7.ckpt")
