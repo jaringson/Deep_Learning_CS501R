@@ -28,43 +28,36 @@ def max_pool_2x2(x):
 def LeakyReLU(x, alpha=0.2):
     return tf.maximum(alpha*x, x)
 
-def conv_t( x, filter_size=3, stride=1, num_filters=64, is_output=False,batch_norm=True, name="conv_t"):
+def conv_t( x, filter_size=3, stride=1, num_filters=64, is_output=False,out_size=None, name="conv_t"):
     with tf.name_scope(name) as scope:
     
    
         x_shape = x.get_shape().as_list()
-        #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
-        W =tf.Variable( 0.02*np.random.randn(filter_size, filter_size, x_shape[3], x_shape[3]).astype(np.float32)) 
-        b = tf.Variable( 0.02*np.random.randn(x_shape[3]).astype(np.float32))
-        #print b.get_shape()
-        #b_2 = bias_variable([x_shape[3]])
-        #print b_2.get_shape()
+        W =tf.Variable( 0.02*np.random.randn(filter_size, filter_size, num_filters, x_shape[3]).astype(np.float32)) 
+        b = tf.Variable( 0.02*np.random.randn(x_shape[3]).astype(np.float32)) 
+        
+	if out_size ==None:
+            outsize = x_shape
+            outsize[0] = batch_size
+            outsize[1] *= 2
+            outsize[2] *= 2
+            outsize[3] = W.get_shape().as_list()[2]
+
         h = []
         
 
         if not is_output:
-            h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2 , x_shape[2]*2, x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b)        
-            #h = tf.nn.relu(conv(h,num_filters=num_filters,stride=1, is_output=True, batch_norm=False))
+            h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=outsize, strides=[1, stride, stride, 1], padding="SAME") + b)        
 		
         else:
             h = tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2, x_shape[2]*2, x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b
-            #h = conv(h,num_filters=num_filters,stride=1, is_output=True, batch_norm=False)
-            #h = tf.tanh(h)
 
-        if batch_norm:
-            mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
-            offset = np.zeros(mean.get_shape()[-1], dtype='float32')
-            scale = 0.9*np.ones(var.get_shape()[-1], dtype='float32')
-            result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-5)
-        else:
-            result = h
 
         return result
 
-def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, batch_norm=True, name="conv"):
+def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, name="conv"):
     with tf.name_scope(name) as scope:
         x_shape = x.get_shape().as_list()
-        #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
         W = tf.Variable( 0.02*np.random.randn(filter_size, filter_size, x_shape[3], num_filters).astype(np.float32))
         b = tf.Variable( 0.02*np.random.randn(num_filters).astype(np.float32))
         h = []
@@ -77,23 +70,13 @@ def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, batch_nor
         else:
             h = tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b
 
-        if batch_norm:
-            mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
-            offset = np.zeros(mean.get_shape()[-1], dtype='float32')
-            scale = 0.9*np.ones(var.get_shape()[-1], dtype='float32')
-            result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-5)
-        else:
-            result = h	
 
         return result
 
 def fc( x, out_size=50, is_output=False, name="fc" ):
     with tf.name_scope(name) as scope:
-        #W = weight_variable( [x.get_shape().as_list()[1], out_size])
         W = tf.Variable( 0.02*np.random.randn(x.get_shape().as_list()[1], out_size).astype(np.float32))
-        #W = tf.Variable(np.random.normal(0,0.02,x.get_shape().as_list()[1]
         b = tf.Variable( 0.02*np.random.randn(out_size).astype(np.float32))
-        #b = bias_variable([out_size])
         h = []
         if not is_output:
             h = tf.nn.relu(tf.matmul(x,W)+b)
@@ -110,7 +93,7 @@ def Generator(n_samples,noise):
     print G_2.get_shape()
     G_3 = conv_t(G_2,num_filters=256, stride=2)
     print G_3.get_shape()
-    G_4 = conv(G_3,num_filters=3,stride=1,is_output=True,batch_norm=False)
+    G_4 = conv(G_3, num_filters=3, stride=1, is_output=True, batch_norm=False)
     print G_4.get_shape()
     #G_5 = conv_t(G_4,num_filters=3, stride=2, is_output=True)
     #print G_5.get_shape()
@@ -125,7 +108,7 @@ def Generator(n_samples,noise):
 def Discriminator(input):
     #input = tf.reshape(input, [BATCH_SIZE, 32,32,3],'D_reshape')
     #print input.get_shape()
-    D_2 = conv(input,num_filters=188,stride=2,name='D2',batch_norm=False)
+    D_2 = conv(input, num_filters=188, stride=2, name='D2', batch_norm=False)
     print D_2.get_shape()
     D_3 = conv(D_2,num_filters=256,stride=2,name='D3')
     print D_3.get_shape()
