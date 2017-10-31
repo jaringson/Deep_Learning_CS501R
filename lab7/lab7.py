@@ -1,15 +1,18 @@
 import numpy as np 
 import tensorflow as tf
 import batch_utils
+from scipy.misc import imsave
+import simplejson
 
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
 
-BATCH_SIZE = 5
+BATCH_SIZE = 2#50
 LAMBDA = 10 # Gradient penalty lambda hyperparameter
 
 g_scope = 0
-d_scope = 0
+#d_scope = 0
+noise = 0
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.2)
@@ -25,59 +28,72 @@ def max_pool_2x2(x):
 def LeakyReLU(x, alpha=0.2):
     return tf.maximum(alpha*x, x)
 
-def conv_t( x, filter_size=3, stride=1, num_filters=64, is_output=False, name="conv_t" ):
-    
+def conv_t( x, filter_size=3, stride=1, num_filters=64, is_output=False,batch_norm=True, name="conv_t"):
     with tf.name_scope(name) as scope:
+    
+   
         x_shape = x.get_shape().as_list()
         #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
-        W = tf.Variable( 1e-3*np.random.randn(filter_size, filter_size, x_shape[3], x_shape[3]).astype(np.float32))
-        b = bias_variable([x_shape[3]])
+        W =tf.Variable( 0.02*np.random.randn(filter_size, filter_size, x_shape[3], x_shape[3]).astype(np.float32)) 
+        b = tf.Variable( 0.02*np.random.randn(x_shape[3]).astype(np.float32))
+        #print b.get_shape()
+        #b_2 = bias_variable([x_shape[3]])
+        #print b_2.get_shape()
         h = []
         
 
         if not is_output:
-            h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2 ,
-                    x_shape[2]*2 ,x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b)        
-            
+            h = tf.nn.relu(tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2 , x_shape[2]*2, x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b)        
+            #h = tf.nn.relu(conv(h,num_filters=num_filters,stride=1, is_output=True, batch_norm=False))
+		
         else:
-            h = tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2 ,
-                    x_shape[2]*2 ,x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b
-        h = conv(h,num_filters=num_filters,stride=1)
+            h = tf.nn.conv2d_transpose(x, W, output_shape=[BATCH_SIZE ,x_shape[1]*2, x_shape[2]*2, x_shape[3]], strides=[1,stride,stride,1], padding='SAME') + b
+            #h = conv(h,num_filters=num_filters,stride=1, is_output=True, batch_norm=False)
+            #h = tf.tanh(h)
 
-        mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
-        offset = np.zeros(mean.get_shape()[-1], dtype='float32')
-        scale = np.ones(var.get_shape()[-1], dtype='float32')
-        result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-4)
+        if batch_norm:
+            mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
+            offset = np.zeros(mean.get_shape()[-1], dtype='float32')
+            scale = 0.9*np.ones(var.get_shape()[-1], dtype='float32')
+            result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-5)
+        else:
+            result = h
 
         return result
 
-def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, name="conv" ):
+def conv( x, filter_size=3, stride=1, num_filters=64, is_output=False, batch_norm=True, name="conv"):
     with tf.name_scope(name) as scope:
         x_shape = x.get_shape().as_list()
         #W = weight_variable([filter_size, filter_size, x.get_shape().as_list()[3], num_filters])
-        W = tf.Variable( 1e-3*np.random.randn(filter_size, filter_size, x_shape[3], 
-            num_filters).astype(np.float32))
-        b = bias_variable([num_filters])
+        W = tf.Variable( 0.02*np.random.randn(filter_size, filter_size, x_shape[3], num_filters).astype(np.float32))
+        b = tf.Variable( 0.02*np.random.randn(num_filters).astype(np.float32))
         h = []
+        result = []
         
 
         if not is_output:
             h = LeakyReLU(tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b)
+            #result = h
         else:
             h = tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding='SAME') + b
 
-        mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
-        offset = np.zeros(mean.get_shape()[-1], dtype='float32')
-        scale = np.ones(var.get_shape()[-1], dtype='float32')
-        result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-4)
-        
+        if batch_norm:
+            mean, var = tf.nn.moments(h, [0,1,2], keep_dims=False)
+            offset = np.zeros(mean.get_shape()[-1], dtype='float32')
+            scale = 0.9*np.ones(var.get_shape()[-1], dtype='float32')
+            result = tf.nn.batch_normalization(h, mean, var, offset, scale, 1e-5)
+        else:
+            result = h	
+
         return result
 
 def fc( x, out_size=50, is_output=False, name="fc" ):
     with tf.name_scope(name) as scope:
         #W = weight_variable( [x.get_shape().as_list()[1], out_size])
-        W = tf.Variable( 1e-3*np.random.randn(x.get_shape().as_list()[1], out_size).astype(np.float32))
-        b = bias_variable([out_size])
+        W = tf.Variable( 0.02*np.random.randn(x.get_shape().as_list()[1], out_size).astype(np.float32))
+        #W = tf.Variable(np.random.normal(0,0.02,x.get_shape().as_list()[1]
+        b = tf.Variable( 0.02*np.random.randn(out_size).astype(np.float32))
+        #b = bias_variable([out_size])
         h = []
         if not is_output:
             h = tf.nn.relu(tf.matmul(x,W)+b)
@@ -85,91 +101,104 @@ def fc( x, out_size=50, is_output=False, name="fc" ):
             h = tf.matmul(x,W)+b
         return h
 
-def Generator(n_samples):
-    global g_scope
-    with tf.variable_scope('G_model') as g_scope:
-        noise = tf.random_normal([BATCH_SIZE, 10,10,1])
-        #G_z = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 10, 10, 1], name="Zs")
-
-        G_1 = conv(noise,num_filters=1024, stride=3)
-        print G_1.get_shape()
-        G_2 = conv_t(G_1,num_filters=512, stride=2)
-        print G_2.get_shape()
-        G_3 = conv_t(G_2,num_filters=3, stride=2)
-        print G_3.get_shape()
-        #G_4 = conv_t(G_3,num_filters=188, stride=2)
-        #print G_4.get_shape()
-        #G_5 = conv_t(G_4,num_filters=3, stride=2, is_output=True)
-        #print G_5.get_shape()
+def Generator(n_samples,noise):
+    noise_2 = fc(noise, out_size=4*4*256,is_output=True)
+    noise_3 = tf.reshape(noise_2,[BATCH_SIZE, 4, 4,256])
+    G_1 = conv_t(noise_3,num_filters=1024, stride=2)
+    print G_1.get_shape()
+    G_2 = conv_t(G_1,num_filters=512, stride=2)
+    print G_2.get_shape()
+    G_3 = conv_t(G_2,num_filters=256, stride=2)
+    print G_3.get_shape()
+    G_4 = conv(G_3,num_filters=3,stride=1,is_output=True,batch_norm=False)
+    print G_4.get_shape()
+    #G_5 = conv_t(G_4,num_filters=3, stride=2, is_output=True)
+    #print G_5.get_shape()
 	
-	last = G_3
-        shape = last.get_shape().as_list()
-        G_flat = tf.reshape(last, [-1,shape[1]*shape[2]*shape[3]])
-        print G_flat.get_shape()
-        return G_flat
+    last = G_4
+    last = tf.tanh(last)
+    #shape = last.get_shape().as_list()
+    #G_flat = tf.reshape(last, [-1,shape[1]*shape[2]*shape[3]])
+    #print G_flat.get_shape()
+    return last#G_flat
 
 def Discriminator(input):
-    global d_scope
-    with tf.variable_scope('D_model') as d_scope:
-        #D_1 = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 64, 64, 3])
-        input = tf.reshape(input, [BATCH_SIZE, 16,16,3],'D_reshape')
-        print input.get_shape()
-        D_2 = conv(input,num_filters=188,stride=2,name='D2')
-        print D_2.get_shape()
-        D_3 = conv(D_2,num_filters=256,stride=2,name='D3')
-        print D_3.get_shape()
-        #D_4 = conv(D_3,num_filters=512,stride=2)
-        #print D_4.get_shape()
-        #D_5 = conv(D_4,num_filters=1024,stride=2)
-        #print D_5.get_shape()
-        
-	last = D_3
-	shape = last.get_shape().as_list()
-        D_flat = tf.reshape(last,[-1,shape[1]*shape[2]*shape[3]])
-        D_out = fc(D_flat, out_size=1, is_output=True,name='D_out')
-        d_scope.reuse_variables()
-        print D_out.get_shape()
-        return D_out
+    #input = tf.reshape(input, [BATCH_SIZE, 32,32,3],'D_reshape')
+    #print input.get_shape()
+    D_2 = conv(input,num_filters=188,stride=2,name='D2',batch_norm=False)
+    print D_2.get_shape()
+    D_3 = conv(D_2,num_filters=256,stride=2,name='D3')
+    print D_3.get_shape()
+    D_4 = conv(D_3,num_filters=512,stride=2,name='D4')
+    print D_4.get_shape()
+    D_5 = conv(D_4,num_filters=1024,stride=2,name='D5')
+    print D_5.get_shape()
+     
+    last = D_5
+    #last = tf.sigmoid(D_4)
+    shape = last.get_shape().as_list()
+    D_flat = tf.reshape(last,[-1,shape[1]*shape[2]*shape[3]])
+    #D_flat = tf.tanh(D_flat)
+    D_out = fc(D_flat, out_size=1, is_output=True, name='D_out')
+    #D_out = LeakyReLU(D_out)
+    #D_out = conv(last, num_filters =1, stride=shape[1], is_output=True,batch_norm=False)
+    print D_out.get_shape()
+    return D_out
 
 
-fake_data = Generator(5)
-real_data = tf.placeholder(tf.float32, shape=[BATCH_SIZE, fake_data.get_shape()[1]], name="input_data")
+with tf.variable_scope('G_model') as g_scope:
+    z = tf.random_normal([BATCH_SIZE, 100])
+    #z = tf.ones([BATCH_SIZE, 100]) * 0.5
+    x_tilda = Generator(BATCH_SIZE,z)
 
-print '------------------'
+shape_fd = x_tilda.get_shape().as_list()
 
-disc_fake = Discriminator(fake_data)
-
-with tf.variable_scope(d_scope, reuse=True)
-
-disc_real = Discriminator(real_data)
-
-gen_cost = -tf.reduce_mean(disc_fake)
-disc_cost = tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real)
-
+real_data = tf.placeholder(tf.float32, shape=[BATCH_SIZE, shape_fd[1]* shape_fd[2]* shape_fd[3] ], name="input_data")
+print 'real_data',real_data.get_shape()
+x = tf.reshape(real_data, [BATCH_SIZE,shape_fd[1],shape_fd[2],shape_fd[3]])
 
 print '------------------'
+with tf.variable_scope("D_model") as d_scope:
+    d_x_tilda = Discriminator(x_tilda)
+    d_scope.reuse_variables()
 
-alpha = tf.random_uniform(
-    shape=[BATCH_SIZE,1], 
-    minval=0.,
-    maxval=1.
-)
-differences = fake_data - real_data
-print differences.get_shape()
-interpolates = real_data + (alpha*differences)
-gradients = tf.gradients(Discriminator(interpolates), [interpolates])[0]
-slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+    d_x = Discriminator(x)
+
+
+
+    print '------------------'
+
+    epsilon = tf.random_uniform(
+        shape=[BATCH_SIZE,1,1,1], 
+        minval=0.,
+        maxval=1.
+    )
+    differences = x - x_tilda 
+    x_hat = x_tilda + (epsilon*differences)
+    
+    d_x_hat = Discriminator(x_hat) 
+    #d_vars = d_scope.trainable_variables() 
+
+
+
+gen_cost = -tf.reduce_mean(d_x_tilda)
+disc_cost = tf.reduce_mean(d_x_tilda) - tf.reduce_mean(d_x)
+
+gradients = tf.gradients(d_x_hat, [x_hat])[0]
+print gradients.get_shape()
+slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1,2,3]))
+
+print slopes.get_shape()
 gradient_penalty = tf.reduce_mean((slopes-1.)**2)
 disc_cost += LAMBDA*gradient_penalty
 
 
 with tf.name_scope('Optimizer'):
+    
     g_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=g_scope.name)
-    gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0., beta2=0.9).minimize(gen_cost,
-                                          var_list=g_vars)
+    gen_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.999).minimize(gen_cost, var_list=g_vars)
     d_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=d_scope.name)
-    disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0., beta2=0.9).minimize(disc_cost,
-                                           var_list=d_vars)
+    disc_train_op = tf.train.AdamOptimizer(learning_rate=1e-4, beta1=0.5, beta2=0.999).minimize(disc_cost, var_list=d_vars)
 
 
     
@@ -178,29 +207,45 @@ d_summary = tf.summary.scalar( 'D Cost', disc_cost )
 
 merged_summary_op = tf.summary.merge_all()
 
-save_dir = "a"
+save_dir = "t"
 
 summary_writer = tf.summary.FileWriter("./"+ save_dir,graph=sess.graph)
 
-saver = tf.train.Saver()
-
 sess.run(tf.global_variables_initializer())
+saver = tf.train.Saver()
+#saver.restore(sess, 'p/lab7.ckpt')
 
-NUM_EPOCHS = 1000*2
+NUM_EPOCHS = 400000
 n_critic = 5
 
 for i in range(NUM_EPOCHS):
     batch = []
-    for i in range(n_critic):
-        batch = batch_utils.next_batch(BATCH_SIZE)
+    for j in range(n_critic):
+        batch = batch_utils.next_batch(BATCH_SIZE,i)
 
         disc_train_op.run(feed_dict={real_data:batch[0]})
     gen_train_op.run(feed_dict={real_data:batch[0]})
-    if i % 10:
+    if i % 10==0:
 	print i
-        summary_str = sess.run([merged_summary_op],feed_dict={real_data:batch[0]})
-        summary_writer.add_summary(summary_str[0],i)
-     
+        summary_str,n_data,im_data,im_real,dxt = sess.run([merged_summary_op,z,x_tilda, x, d_x_tilda ],feed_dict={real_data:batch[0]})
+	#print im_data
+	#print im_real
+	#print dxt
+	'''file = open(save_dir+'/noise_z.txt','w')
+	print 'here'
+	for n in n_data:
+	    simplejson.dump(n.tolist(), file)
+	    file.write('\n')
+	file .close()'''
+	for iter, im in enumerate(im_data):
+	    imsave(save_dir+'/'+str(iter)+'.png',im)
+	#print im_data[0]
+	#print im_data[0]*255.0
+	#imsave(save_dir+'/Test_1.png',im_data[0])
+	#imsave(save_dir+'/Test_2.png',im_data[0]*255.0)
+	imsave(save_dir+'/real.png',im_real[0])
+	summary_writer.add_summary(summary_str,i)
+    
 
 saver.save(sess, save_dir+"/lab7.ckpt")
 
