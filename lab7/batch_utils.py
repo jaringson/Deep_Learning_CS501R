@@ -11,24 +11,37 @@ images = './img_align_celeba/'
 
 
 
-def next_batch(batch,input_i):
+def next_batch(batch):
     output = []
     output.append([])
     
 
+    N = 202496
 
     for i in range(batch):
         
-       	input_i = 0 
-        #image = random.choice(glob.glob(images+'/*'))
-    	image = ""
-	if input_i*batch + i+1 >= 10:
-	    image = images+"0000"+str(input_i* batch+i+1)+".jpg"
-	else:
-	    image = images+"00000"+str(input_i*batch+i+1)+".jpg" 
-        #print image
-        # img_in = np.array(Image.open(image).resize((16,16)))
-        img_in = Image.open(image)
+	place = random.randrange(0, N)
+	img_in = None
+	while img_in is None:
+	    try:
+		image = ""
+		if place  >= 100000:
+		    image = images+str(place)+".jpg"
+		elif place >= 10000:
+		    image = images+"0"+str(place)+".jpg"
+		elif place >= 1000:
+		    image = images+"00"+str(place)+".jpg"
+		elif place >= 100:
+		    image = images+"000"+str(place)+".jpg"
+		elif place  >= 10:
+		    image = images+"0000"+str(place)+".jpg"
+
+		else:
+		    image = images+"00000"+str(place)+".jpg" 
+		img_in = Image.open(image)
+	    except:
+		place = (place + 1) % N
+		
 
         new_width = 150
         new_height = 150
@@ -39,7 +52,7 @@ def next_batch(batch,input_i):
         right = (width + new_width)/2
         bottom = (height + new_height)/2
 
-        img_in = img_in.crop((left, top, right, bottom)).resize((32, 32))
+        img_in = img_in.crop((left, top, right, bottom)).resize((64, 64))
         #img_in.show()
         img_in = np.array(img_in)
        	img_in = np.ndarray.flatten(img_in)
