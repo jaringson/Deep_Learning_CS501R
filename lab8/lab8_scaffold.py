@@ -3,7 +3,7 @@
 import tensorflow as tf
 import numpy as np
 from textloader import TextLoader
-from tensorflow.python.ops.rnn_cell import BasicLSTMCell, MultiRNNCell
+from tensorflow.python.ops.rnn_cell import BasicLSTMCell, MultiRNNCell, RNNCell
 from tensorflow.contrib.legacy_seq2seq import sequence_loss, rnn_decoder
 
 #
@@ -78,7 +78,7 @@ loss_W = [1.0 for i in range(sequence_length)]
 loss = sequence_loss(logits, targets, loss_W)
 
 # create a training op using the Adam optimizer
-optim = tf.train.AdamOptimizer(1e-1).minimize(loss)
+optim = tf.train.AdamOptimizer().minimize(loss)
 
 # ------------------
 # YOUR SAMPLER GRAPH HERE
@@ -92,16 +92,57 @@ optim = tf.train.AdamOptimizer(1e-1).minimize(loss)
 s_in_ph = tf.placeholder( tf.int32, [ 1, 1], name='inputs' )
 s_in_onehot = tf.one_hot( s_in_ph, vocab_size, name="input_onehot" )
 
-s_inputs = tf.split( s_in_onehot, 1, axis=1 )
-s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
+s_inputs = tf.split( s_in_onehot, 1, axis=0 )
 
 s_initial_state = lstm.zero_state(1, tf.float32)
 
-# call seq2seq.rnn_decoder
 with tf.variable_scope("s_decoder") as scope:
     s_outputs, s_final_state = rnn_decoder(s_inputs, s_initial_state, lstm)
 
 s_probs = [tf.matmul(output, W) + b * batch_size for output in s_outputs]
+
+
+
+
+
+class mygru( RNNCell ):
+ 
+    def __init__( self, state_dim):
+        self.state_dim = state_dim
+ 
+    @property
+    def state_size(self):
+        return self.state_dim
+ 
+    @property
+    def output_size(self):
+        return self.state_dim
+ 
+    def __call__( self, inputs, state, scope=None ):
+
+        vocab_size = inputs.get_shape().as_list()[1]
+
+        # self.output_size = vocab_size
+        wz = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        uz = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        bz = tf.Variable(tf.truncated_normal([vocab_size]))
+        
+        wr = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        ur = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        br = tf.Variable(tf.truncated_normal([vocab_size]))
+
+        wh = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        uh = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
+        bh = tf.Variable(tf.truncated_normal([vocab_size]))
+
+        
+        zt = tf.nn.sigmoid(wz * inputs + uz * state + bz)
+        rt = tf.nn.sigmoid(wr * inputs + ur * state + br)
+        ht_tilda = tf.nn.tanh(wh*inputs + uh*tf.multiply(rt,state)+ bh)
+        ht = tf.multiply(zt,state)+ tf.multiply((1-zt),ht_tilda)
+        return (ht, ht)
+
+
 #
 # ==================================================================
 # ==================================================================
@@ -150,15 +191,15 @@ def sample( num=200, prime='ab' ):
         # ...and get a vector of probabilities out!
 
         # now sample (or pick the argmax)
-        #sample = np.argmax( s_probsv[0][0] )
+        sample = np.argmax( s_probsv[0] )
         #print s_probsv[0][0]
-        max_ind = np.argmin(s_probsv[0][0])
+        #max_ind = np.argmin(s_probsv[0][0])
         # print max_ind
-        s_exp = s_probsv[0][0] + s_probsv[0][0][max_ind] + .00001
+        #s_exp = s_probsv[0][0] + s_probsv[0][0][max_ind] + .00001
         # print s_exp
-        s_normal = s_exp / np.sum(s_exp) 
+        #s_normal = s_exp / np.sum(s_exp) 
         # print s_normal
-        sample = np.random.choice( vocab_size, p=s_normal)
+        #sample = np.random.choice( vocab_size, p=s_normal)
 
         pred = data_loader.chars[sample]
         ret += pred
