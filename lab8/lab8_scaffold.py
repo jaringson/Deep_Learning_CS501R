@@ -38,20 +38,23 @@ class mygru( RNNCell ):
  
     def __call__( self, inputs, state, scope=None ):
 
-        vocab_size = inputs.get_shape().as_list()[1]
+        in_shape = inputs.get_shape().as_list()
+        st_shape = state.get_shape().as_list()
+        print in_shape
+        print st_shape
 
         # self.output_size = vocab_size
-        wz = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        uz = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        bz = tf.Variable(tf.truncated_normal([vocab_size]))
+        wz = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
+        uz = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
+        bz = tf.Variable(tf.truncated_normal([self.state_dim]))
         
-        wr = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        ur = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        br = tf.Variable(tf.truncated_normal([vocab_size]))
+        wr = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
+        ur = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
+        br = tf.Variable(tf.truncated_normal([self.state_dim]))
 
-        wh = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        uh = tf.Variable(tf.truncated_normal([self.state_dim,vocab_size], stddev=0.02))
-        bh = tf.Variable(tf.truncated_normal([vocab_size]))
+        wh = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
+        uh = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
+        bh = tf.Variable(tf.truncated_normal([self.state_dim]))
 
         
         zt = tf.nn.sigmoid(wz * inputs + uz * state + bz)
