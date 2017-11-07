@@ -35,7 +35,6 @@ tf.reset_default_graph()
 
 in_ph = tf.placeholder( tf.int32, [ batch_size, sequence_length ], name='inputs' )
 targ_ph = tf.placeholder( tf.int32, [ batch_size, sequence_length ], name='targets' )
-#targ_ph = tf.placeholder( tf.float32, [ batch_size, sequence_length ], name='targets' )
 in_onehot = tf.one_hot( in_ph, vocab_size, name="input_onehot" )
 
 inputs = tf.split( in_onehot, sequence_length, axis=1 )
@@ -69,8 +68,8 @@ with tf.variable_scope("decoder") as scope:
 # transform the list of state outputs to a list of logits.
 # use a linear transformation.
 
-W = tf.Variable(tf.random_normal([state_dim,vocab_size], stddev=0.02))
-b = tf.Variable(tf.random_normal([vocab_size]))
+W = tf.Variable(tf.truncated_normal([state_dim,vocab_size], stddev=0.02))
+b = tf.Variable(tf.truncated_normal([vocab_size]))
 logits = [tf.matmul(output, W) + b * batch_size for output in outputs]
 
 loss_W = [1.0 for i in range(sequence_length)]
@@ -79,7 +78,7 @@ loss_W = [1.0 for i in range(sequence_length)]
 loss = sequence_loss(logits, targets, loss_W)
 
 # create a training op using the Adam optimizer
-optim = tf.train.AdamOptimizer(1e-4).minimize(loss)
+optim = tf.train.AdamOptimizer(1e-1).minimize(loss)
 
 # ------------------
 # YOUR SAMPLER GRAPH HERE
@@ -96,9 +95,6 @@ s_in_onehot = tf.one_hot( s_in_ph, vocab_size, name="input_onehot" )
 s_inputs = tf.split( s_in_onehot, 1, axis=1 )
 s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
 
-# s_inputs = [tf.placeholder(tf.int32, [1,1])]
-# print s_inputs
-# s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
 s_initial_state = lstm.zero_state(1, tf.float32)
 
 # call seq2seq.rnn_decoder
@@ -154,15 +150,15 @@ def sample( num=200, prime='ab' ):
         # ...and get a vector of probabilities out!
 
         # now sample (or pick the argmax)
-        sample = np.argmax( s_probsv[0][0] )
+        #sample = np.argmax( s_probsv[0][0] )
         #print s_probsv[0][0]
-	max_ind = np.argmax(s_probsv[0][0])
-	#print max_ind
-        s_exp = np.exp(s_probsv[0][0] - s_probsv[0][0][max_ind])
-        #print s_exp
-	s_normal = s_exp / np.sum(s_exp) 
-        #print s_normal
-        #sample = np.random.choice( vocab_size, p=s_normal)
+        max_ind = np.argmin(s_probsv[0][0])
+        # print max_ind
+        s_exp = s_probsv[0][0] + s_probsv[0][0][max_ind] + .00001
+        # print s_exp
+        s_normal = s_exp / np.sum(s_exp) 
+        # print s_normal
+        sample = np.random.choice( vocab_size, p=s_normal)
 
         pred = data_loader.chars[sample]
         ret += pred
@@ -179,6 +175,9 @@ def sample( num=200, prime='ab' ):
 sess = tf.Session()
 sess.run( tf.global_variables_initializer() )
 summary_writer = tf.summary.FileWriter( "./tf_logs", graph=sess.graph )
+
+saver = tf.train.Saver()
+# saver.restore(sess, 'p/1/1/lab7.ckpt')
 
 lts = []
 
@@ -212,6 +211,9 @@ for j in range(5000):
         if i%1000==0:
             print "%d %d\t%.4f" % ( j, i, lt )
             lts.append( lt )
+            
+    # if j % 50 == 0:
+    #     saver.save(sess, "./tf_logs/lab7.ckpt")
 
     print sample( num=60, prime="And " )
     # print sample( num=60, prime="ababab" )
