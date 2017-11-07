@@ -154,14 +154,15 @@ def sample( num=200, prime='ab' ):
         # ...and get a vector of probabilities out!
 
         # now sample (or pick the argmax)
-        # sample = np.argmax( s_probsv[0][0] )
-        print s_probsv[0][0]
-
-        s_exp = s_probsv[0][0]
-        s_normal = np.exp(s_exp) / np.sum(exp) 
-        print s_normal
-        break
-        # sample = np.random.choice( vocab_size, p=s_probsv[0][0] )
+        sample = np.argmax( s_probsv[0][0] )
+        #print s_probsv[0][0]
+	max_ind = np.argmax(s_probsv[0][0])
+	#print max_ind
+        s_exp = np.exp(s_probsv[0][0] - s_probsv[0][0][max_ind])
+        #print s_exp
+	s_normal = s_exp / np.sum(s_exp) 
+        #print s_normal
+        #sample = np.random.choice( vocab_size, p=s_normal)
 
         pred = data_loader.chars[sample]
         ret += pred
@@ -183,7 +184,7 @@ lts = []
 
 print "FOUND %d BATCHES" % data_loader.num_batches
 
-for j in range(1000):
+for j in range(5000):
     state = sess.run( initial_state )
     data_loader.reset_batch_pointer()
 
