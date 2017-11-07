@@ -11,8 +11,8 @@ from tensorflow.contrib.legacy_seq2seq import sequence_loss, rnn_decoder
 #
 # Global variables
 
-batch_size = 3 #50
-sequence_length = 5# 50
+batch_size = 50
+sequence_length = 50
 
 data_loader = TextLoader( ".", batch_size, sequence_length )
 
@@ -73,7 +73,6 @@ W = tf.Variable(tf.random_normal([state_dim,vocab_size], stddev=0.02))
 b = tf.Variable(tf.random_normal([vocab_size]))
 logits = [tf.matmul(output, W) + b * batch_size for output in outputs]
 
-l_shape = logits[0].get_shape().as_list()
 loss_W = [1.0 for i in range(sequence_length)]
 
 # call seq2seq.sequence_loss
@@ -91,13 +90,14 @@ optim = tf.train.AdamOptimizer(1e-4).minimize(loss)
 # remember, we want to reuse the parameters of the cell and whatever
 # parameters you used to transform state outputs to logits!
 
-# s_in_ph = tf.placeholder( tf.int32, [ 1, sequence_length ], name='inputs' )
-# s_in_onehot = tf.one_hot( s_in_ph, vocab_size, name="input_onehot" )
+s_in_ph = tf.placeholder( tf.int32, [ 1, 1], name='inputs' )
+s_in_onehot = tf.one_hot( s_in_ph, vocab_size, name="input_onehot" )
 
-# s_inputs = tf.split( s_in_onehot, sequence_length, axis=1 )
-# s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
+s_inputs = tf.split( s_in_onehot, 1, axis=1 )
+s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
 
-s_inputs = [tf.placeholder(tf.int32, [1])]
+# s_inputs = [tf.placeholder(tf.int32, [1,1])]
+# print s_inputs
 # s_inputs = [ tf.squeeze(input_, [1]) for input_ in s_inputs ]
 s_initial_state = lstm.zero_state(1, tf.float32)
 
@@ -105,8 +105,7 @@ s_initial_state = lstm.zero_state(1, tf.float32)
 with tf.variable_scope("s_decoder") as scope:
     s_outputs, s_final_state = rnn_decoder(s_inputs, s_initial_state, lstm)
 
-
-
+s_probs = [tf.matmul(output, W) + b * batch_size for output in s_outputs]
 #
 # ==================================================================
 # ==================================================================
@@ -127,7 +126,7 @@ def sample( num=200, prime='ab' ):
     for char in prime[:-1]:
         x = np.ravel( data_loader.vocab[char] ).astype('int32')
         #feed = { s_inputs:x }
-        feed = { s_in_ph:x }
+        feed = { s_in_ph:[x] }
         for i, s in enumerate( s_initial_state ):
             feed[s] = s_state[i]
         s_state = sess.run( s_final_state, feed_dict=feed )
@@ -140,11 +139,12 @@ def sample( num=200, prime='ab' ):
 
         # plug the most recent character in...
         #feed = { s_inputs:x }
-        feed = { s_in_ph:x }
+        feed = { s_in_ph:[x]}
         for i, s in enumerate( s_initial_state ):
             feed[s] = s_state[i]
         ops = [s_probs]
         ops.extend( list(s_final_state) )
+
 
         retval = sess.run( ops, feed_dict=feed )
 
@@ -154,8 +154,14 @@ def sample( num=200, prime='ab' ):
         # ...and get a vector of probabilities out!
 
         # now sample (or pick the argmax)
-        # sample = np.argmax( s_probsv[0] )
-        sample = np.random.choice( vocab_size, p=s_probsv[0] )
+        # sample = np.argmax( s_probsv[0][0] )
+        print s_probsv[0][0]
+
+        s_exp = s_probsv[0][0]
+        s_normal = np.exp(s_exp) / np.sum(exp) 
+        print s_normal
+        break
+        # sample = np.random.choice( vocab_size, p=s_probsv[0][0] )
 
         pred = data_loader.chars[sample]
         ret += pred
@@ -177,15 +183,13 @@ lts = []
 
 print "FOUND %d BATCHES" % data_loader.num_batches
 
-for j in range(10):
-    print 'here'
+for j in range(1000):
     state = sess.run( initial_state )
     data_loader.reset_batch_pointer()
 
     for i in range( data_loader.num_batches ):
         
         x,y = data_loader.next_batch()
-        print x,y
 
         # we have to feed in the individual states of the MultiRNN cell
         feed = { in_ph: x, targ_ph: y }
@@ -208,10 +212,10 @@ for j in range(10):
             print "%d %d\t%.4f" % ( j, i, lt )
             lts.append( lt )
 
-#    print sample( num=60, prime="And " )
-    print sample( num=60, prime="ababab" )
+    print sample( num=60, prime="And " )
+    # print sample( num=60, prime="ababab" )
 #    print sample( num=60, prime="foo ba" )
-#    print sample( num=60, prime="abcdab" )
+    # print sample( num=60, prime="abcdab" )
 
 summary_writer.close()
 
