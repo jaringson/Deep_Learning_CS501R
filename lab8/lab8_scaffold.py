@@ -11,7 +11,7 @@ from tensorflow.contrib.legacy_seq2seq import sequence_loss, rnn_decoder
 #
 # Global variables
 
-batch_size = 50
+batch_size = 3 #50
 sequence_length = 50
 
 data_loader = TextLoader( ".", batch_size, sequence_length )
@@ -27,7 +27,17 @@ class mygru( RNNCell ):
  
     def __init__( self, state_dim):
         self.state_dim = state_dim
- 
+	self.wz = None
+	self.uz = None 
+    	self.bz = None
+
+	self.wr = None
+	self.ur = None
+	self.br = None
+	
+	self.wh = None
+	self.uh = None
+	self.bh = None
     @property
     def state_size(self):
         return self.state_dim
@@ -37,29 +47,30 @@ class mygru( RNNCell ):
         return self.state_dim
  
     def __call__( self, inputs, state, scope=None ):
+	if self.wz == None:
+		in_shape = inputs.get_shape().as_list()
+		st_shape = state.get_shape().as_list()
+		print in_shape
+		print st_shape
+		# self.output_size = vocab_size
+		self.wz = tf.Variable(tf.truncated_normal([in_shape[1],self.state_dim], stddev=0.02)) 
+		self.uz = tf.Variable(tf.truncated_normal([st_shape[1],self.state_dim], stddev=0.02))
+		self.bz = tf.Variable(tf.truncated_normal([self.state_dim]))
+		print self.wz.get_shape()
+		print self.uz.get_shape()
+		print self.bz.get_shape()
+		self.wr = tf.Variable(tf.truncated_normal([in_shape[1],self.state_dim], stddev=0.02))
+		self.ur = tf.Variable(tf.truncated_normal([st_shape[1],self.state_dim], stddev=0.02))
+		self.br = tf.Variable(tf.truncated_normal([self.state_dim]))
 
-        in_shape = inputs.get_shape().as_list()
-        st_shape = state.get_shape().as_list()
-        print in_shape
-        print st_shape
+		self.wh = tf.Variable(tf.truncated_normal([in_shape[1],self.state_dim], stddev=0.02))
+		self.uh = tf.Variable(tf.truncated_normal([st_shape[1],self.state_dim], stddev=0.02))
+		self.bh = tf.Variable(tf.truncated_normal([self.state_dim]))
 
-        # self.output_size = vocab_size
-        wz = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
-        uz = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
-        bz = tf.Variable(tf.truncated_normal([self.state_dim]))
         
-        wr = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
-        ur = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
-        br = tf.Variable(tf.truncated_normal([self.state_dim]))
-
-        wh = tf.Variable(tf.truncated_normal([self.state_dim,in_shape[1]], stddev=0.02))
-        uh = tf.Variable(tf.truncated_normal([self.state_dim,st_shape[1]], stddev=0.02))
-        bh = tf.Variable(tf.truncated_normal([self.state_dim]))
-
-        
-        zt = tf.nn.sigmoid(wz * inputs + uz * state + bz)
-        rt = tf.nn.sigmoid(wr * inputs + ur * state + br)
-        ht_tilda = tf.nn.tanh(wh*inputs + uh*tf.multiply(rt,state)+ bh)
+        zt = tf.nn.sigmoid(tf.matmul(inputs,self.wz) + tf.matmul(state,self.uz) + self.bz)
+        rt = tf.nn.sigmoid(tf.matmul(inputs,self.wr) + tf.matmul(state,self.ur) + self.br)
+        ht_tilda = tf.nn.tanh(tf.matmul(inputs,self.wh) + tf.matmul(tf.multiply(rt,state),self.uh)+ self.bh)
         ht = tf.multiply(zt,state)+ tf.multiply((1-zt),ht_tilda)
         return (ht, ht)
 #
@@ -95,16 +106,17 @@ targets = tf.split( targ_ph, sequence_length, axis=1)
 #     note that initial_state will be a *list* of tensors!
 
 
-#cell = mygru( state_dim )
-#cell2 = mygru( state_dim )
-cell = BasicLSTMCell( state_dim )
-cell2 = BasicLSTMCell( state_dim )
+cell = mygru( state_dim )
+cell2 = mygru( state_dim )
+#cell = BasicLSTMCell( state_dim )
+#cell2 = BasicLSTMCell( state_dim )
 lstm = MultiRNNCell([cell, cell2])
 initial_state = lstm.zero_state(batch_size, tf.float32)
 
 # call seq2seq.rnn_decoder
 with tf.variable_scope("decoder") as scope:
     outputs, final_state = rnn_decoder(inputs, initial_state, lstm)
+print outputs[0].get_shape()
 
 # transform the list of state outputs to a list of logits.
 # use a linear transformation.
@@ -195,7 +207,6 @@ def sample( num=200, prime='ab' ):
         s_state = retval[1:]
 
         # ...and get a vector of probabilities out!
-
         # now sample (or pick the argmax)
         sample = np.argmax( s_probsv[0] )
         #print s_probsv[0][0]
@@ -262,9 +273,9 @@ for j in range(1000):
     # if j % 50 == 0:
     #     saver.save(sess, "./tf_logs/lab7.ckpt")
 
-    print sample( num=60, prime="And " )
-    # print sample( num=60, prime="ababab" )
-#    print sample( num=60, prime="foo ba" )
+    #print sample( num=60, prime="And " )
+    #print sample( num=60, prime="ababab" )
+    print sample( num=60, prime="foo ba" )
     # print sample( num=60, prime="abcdab" )
 
 summary_writer.close()
