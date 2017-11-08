@@ -11,7 +11,7 @@ from tensorflow.contrib.legacy_seq2seq import sequence_loss, rnn_decoder
 #
 # Global variables
 
-batch_size = 3 #50
+batch_size = 50
 sequence_length = 50
 
 data_loader = TextLoader( ".", batch_size, sequence_length )
@@ -23,7 +23,7 @@ num_layers = 2
 
 tf.reset_default_graph()
 
-class mygru( RNNCell ):
+class mygru( RNNCell ) :
  
     def __init__( self, state_dim):
         self.state_dim = state_dim
@@ -50,15 +50,10 @@ class mygru( RNNCell ):
 	if self.wz == None:
 		in_shape = inputs.get_shape().as_list()
 		st_shape = state.get_shape().as_list()
-		print in_shape
-		print st_shape
-		# self.output_size = vocab_size
+		
 		self.wz = tf.Variable(tf.truncated_normal([in_shape[1],self.state_dim], stddev=0.02)) 
 		self.uz = tf.Variable(tf.truncated_normal([st_shape[1],self.state_dim], stddev=0.02))
 		self.bz = tf.Variable(tf.truncated_normal([self.state_dim]))
-		print self.wz.get_shape()
-		print self.uz.get_shape()
-		print self.bz.get_shape()
 		self.wr = tf.Variable(tf.truncated_normal([in_shape[1],self.state_dim], stddev=0.02))
 		self.ur = tf.Variable(tf.truncated_normal([st_shape[1],self.state_dim], stddev=0.02))
 		self.br = tf.Variable(tf.truncated_normal([self.state_dim]))
@@ -116,14 +111,13 @@ initial_state = lstm.zero_state(batch_size, tf.float32)
 # call seq2seq.rnn_decoder
 with tf.variable_scope("decoder") as scope:
     outputs, final_state = rnn_decoder(inputs, initial_state, lstm)
-print outputs[0].get_shape()
 
 # transform the list of state outputs to a list of logits.
 # use a linear transformation.
 
 W = tf.Variable(tf.truncated_normal([state_dim,vocab_size], stddev=0.02))
 b = tf.Variable(tf.truncated_normal([vocab_size]))
-logits = [tf.matmul(output, W) + b * batch_size for output in outputs]
+logits = [tf.nn.softmax(tf.matmul(output, W) + b, dim=1) * batch_size for output in outputs]
 
 loss_W = [1.0 for i in range(sequence_length)]
 
@@ -131,7 +125,7 @@ loss_W = [1.0 for i in range(sequence_length)]
 loss = sequence_loss(logits, targets, loss_W)
 
 # create a training op using the Adam optimizer
-optim = tf.train.AdamOptimizer().minimize(loss)
+optim = tf.train.AdamOptimizer(1e-3).minimize(loss)
 
 # ------------------
 # YOUR SAMPLER GRAPH HERE
@@ -153,7 +147,7 @@ s_initial_state = lstm.zero_state(1, tf.float32)
 with tf.variable_scope("s_decoder") as scope:
     s_outputs, s_final_state = rnn_decoder(s_inputs, s_initial_state, lstm)
 
-s_probs = [tf.matmul(output, W) + b * batch_size for output in s_outputs]
+s_probs = [tf.nn.softmax(tf.matmul(output, W) + b, dim=1) * batch_size for output in s_outputs]
 
 
 
@@ -241,7 +235,7 @@ lts = []
 
 print "FOUND %d BATCHES" % data_loader.num_batches
 
-for j in range(1000):
+for j in range(101):
     state = sess.run( initial_state )
     data_loader.reset_batch_pointer()
 
@@ -270,14 +264,16 @@ for j in range(1000):
             print "%d %d\t%.4f" % ( j, i, lt )
             lts.append( lt )
             
-    # if j % 50 == 0:
-    #     saver.save(sess, "./tf_logs/lab7.ckpt")
-
-    #print sample( num=60, prime="And " )
-    #print sample( num=60, prime="ababab" )
-    print sample( num=60, prime="foo ba" )
-    # print sample( num=60, prime="abcdab" )
-
+    if j % 100 == 0:
+        saver.save(sess, "./tf_logs/lab8.ckpt")
+    try:
+        #print sample( num=60, prime="The " )
+        print sample( num=60, prime="And " )
+    	#print sample( num=60, prime="ababab" )
+    	#print sample( num=60, prime="foo ba" )
+    	# print sample( num=60, prime="abcdab" )
+    except:
+	print "err in sample"
 summary_writer.close()
 
 #
