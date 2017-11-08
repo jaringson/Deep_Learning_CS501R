@@ -161,7 +161,7 @@ s_probs = [tf.nn.softmax(tf.matmul(output, W) + b, dim=1) * batch_size for outpu
 # ==================================================================
 #
 
-def sample( num=200, prime='ab' ):
+def sample( num=200, prime='ab', output=False ):
 
     # prime the pump 
 
@@ -171,7 +171,8 @@ def sample( num=200, prime='ab' ):
 
     # for each character, feed it into the sampler graph and
     # update the state.
-    print prime[:-1]
+    if not output:
+        print prime[:-1]
     for char in prime[:-1]:
         x = np.ravel( data_loader.vocab[char] ).astype('int32')
         #feed = { s_inputs:x }
@@ -226,12 +227,27 @@ def sample( num=200, prime='ab' ):
 
 sess = tf.Session()
 sess.run( tf.global_variables_initializer() )
-summary_writer = tf.summary.FileWriter( "./tf_logs", graph=sess.graph )
+outdir = "./tf_logs"
+summary_writer = tf.summary.FileWriter( outdir, graph=sess.graph )
 
 saver = tf.train.Saver()
-# saver.restore(sess, 'p/1/1/lab7.ckpt')
 
 lts = []
+'''
+## For getting output from the network ###
+saver.restore(sess, outdir + '/lab8.ckpt')
+
+for _ in range(40):
+    try:
+        print sample( num=240, prime=data_loader.chars[np.random.choice(vocab_size)] , output=True)
+        #print sample( num=60, prime="The ", output=True )
+    	#print sample( num=60, prime="ababab" , output=True)
+    	#print sample( num=60, prime="foo ba" , output=True)
+    	# print sample( num=60, prime="abcdab" , output=True)
+    except:
+	print "err in sample"
+    print "-----------------"
+'''
 
 print "FOUND %d BATCHES" % data_loader.num_batches
 
@@ -265,15 +281,16 @@ for j in range(101):
             lts.append( lt )
             
     if j % 100 == 0:
-        saver.save(sess, "./tf_logs/lab8.ckpt")
+        saver.save(sess, outdir + "/lab8.ckpt")
     try:
-        #print sample( num=60, prime="The " )
-        print sample( num=60, prime="And " )
+        #print sample( num=60, prime="And " )
+        print sample( num=60, prime="The " )
     	#print sample( num=60, prime="ababab" )
     	#print sample( num=60, prime="foo ba" )
     	# print sample( num=60, prime="abcdab" )
     except:
 	print "err in sample"
+
 summary_writer.close()
 
 #

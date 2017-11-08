@@ -1,0 +1,168 @@
+2017-11-08 09:48:28.771494: I tensorflow/core/common_runtime/gpu/gpu_device.cc:940] Found device 0 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:86:00.0
+Total memory: 11.17GiB
+Free memory: 11.11GiB
+2017-11-08 09:48:28.771530: I tensorflow/core/common_runtime/gpu/gpu_device.cc:961] DMA: 0 
+2017-11-08 09:48:28.771536: I tensorflow/core/common_runtime/gpu/gpu_device.cc:971] 0:   Y 
+2017-11-08 09:48:28.771546: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1030] Creating TensorFlow device (/gpu:0) -> (device: 0, name: Tesla K80, pci bus id: 0000:86:00.0)
+reading text file
+err in sample
+-----------------
+! still and the same on, and the
+king he got to the town, with the time, and then they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the first time
+better and the duke was a good deal of the first time on the b
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+_ the time.
+
+I did was a boy to the town, with a couple of times, and they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the first time
+better and the duke was a good deal of the first time on the band of a man
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+Ther the
+morning, and they was a good deal of the first time on the band of a man with a
+couple of the first time on the band of them off, and they was a good deal
+comfortable a speck on the band of a man was a good deal of the first time
+be
+-----------------
+Xt making out the best
+we was a good deal of time to the town, with a doctor than that way, and
+they was a sight to look at the thick with the things.  I was a dollar
+any more.  I was a constick the river and started on to the town, with
+the
+-----------------
+err in sample
+-----------------
+Sing out of the
+world to the woods to the town, with a couple of times, and they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the first time
+better and the duke was a good deal of the first time on the band of
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+Ping a good
+look and the door and the door and the door and the door and the door and the door
+ways to steal them the town, and they was a good deal of the first time on the band
+of the town, and they was a good deal of the first time on the
+-----------------
+err in sample
+-----------------
+ting off
+them till they was a dream to see what they was a sight to see
+what they was a good deal of the first time on the band of a man was a constick about
+for the door and the door and the door and the door and the door and the door
+ways 
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+Hes the same old wooking
+and the widow was a sight to the town, with a couple of times, and they
+was a good deal a minute, and then they was a couple of thing for the
+time, and they was a good deal of the first time on the band of a man with
+-----------------
+) out of the town, with
+a fell on the band of a man was a constick the river and started on to the
+timber off to the town, with a couple of times, and they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the firs
+-----------------
+Less the same old wooking
+and the widow was a sight to the town, with a couple of times, and they
+was a good deal a minute, and then they was a couple of thing for the
+time, and they was a good deal of the first time on the band of a man wit
+-----------------
+ting off
+them till they was a dream to see what they was a sight to see
+what they was a good deal of the first time on the band of a man was a constick about
+for the door and the door and the door and the door and the door and the door
+ways 
+-----------------
+err in sample
+-----------------
+qunce and
+littered out to the town, with a splinter of the river, and they
+come off.  By and by he done it, and then they was a sight to see
+that way, and they was a good deal of the first time on the band of a man with a
+couple of the first
+-----------------
+0 the
+time he was a good deal of the first time on the band of a man was a constick about
+for the door and the door and the door and the door and the door and the door
+ways to steal them the town, and they was a good deal of the first time o
+-----------------
+) out of the town, with
+a fell on the band of a man was a constick the river and started on to the
+timber off to the town, with a couple of times, and they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the firs
+-----------------
+Ping a good
+look and the door and the door and the door and the door and the door and the door
+ways to steal them the town, and they was a good deal of the first time on the band
+of the town, and they was a good deal of the first time on the
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+&ing a powerful son
+of the first time that was the most a sleep, and then they was a sight
+to the tow-fellow the same old corn, and they was a good deal of the first time
+better and the duke was a good deal of the first time on the band of a
+-----------------
+err in sample
+-----------------
+err in sample
+-----------------
+pot off the band of a spotter
+of them.  I was to be a snake-side that was a sight to the town, with
+a fell on the band of a man was a constick the river and started on to the
+timber and take the mouth of the same way that was a steamboat way
+-----------------
+ting off
+them till they was a dream to see what they was a sight to see
+what they was a good deal of the first time on the band of a man was a constick about
+for the door and the door and the door and the door and the door and the door
+ways 
+-----------------
+0 the
+time he was a good deal of the first time on the band of a man was a constick about
+for the door and the door and the door and the door and the door and the door
+ways to steal them the town, and they was a good deal of the first time o
+-----------------
+ggers the
+king and the duke was a good deal of the first time on the band of a man with a
+couple of the first time on the band of them off, and they was a good deal
+comfortable a speck on the band of a man was a good deal of the first time
+b
+-----------------
+Hes the same old wooking
+and the widow was a sight to the town, with a couple of times, and they
+was a good deal a minute, and then they was a couple of thing for the
+time, and they was a good deal of the first time on the band of a man with
+-----------------
+ness it
+all, and they was a good deal of the first time on the band of a man with a
+canoe, and they was a good deal of the first time on the band of a man with a
+couple of the first time on the band of them off, and they was a good deal
+comf
+-----------------
+zer was a sight to start
+a little time, and then they was a good deal of the first time on the band
+of the town, and they was a good deal of the first time on the band of a man with a
+couple of the first time on the band of them off, and the
+-----------------
