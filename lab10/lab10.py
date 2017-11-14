@@ -62,6 +62,7 @@ print content_l.get_shape()
 
 # --- place your adam optimizer call here
 #     (don't forget to optimize only the opt_img variable)
+adam = ttf.train.AdamOptimizer().minimize(opt_img)
 
 # this clobbers all VGG variables, but we need it to initialize the
 # adam stuff, so we reload all of the weights...
@@ -72,4 +73,5 @@ vgg.load_weights( 'vgg16_weights.npz', sess )
 sess.run( opt_img.assign( content_img ))
 
 # --- place your optimization loop here
-
+for _ in range(100):
+	adam.run()
