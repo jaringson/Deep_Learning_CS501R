@@ -34,33 +34,14 @@ ops = [ getattr( vgg, x ) for x in layers ]
 content_acts = sess.run( ops, feed_dict={vgg.imgs: content_img } )
 style_acts = sess.run( ops, feed_dict={vgg.imgs: style_img} )
 
-# print content_acts
-# print vgg
-
-content_layer = content_acts[8]
-print content_layer.shape
-
-orig_content = ops[8]
-
-print orig_content.get_shape()
-# content_loss = tf.reshape(content_loss, [1, 28*28, 512])
-# print content_loss.get_shape()
-
-# content_loss = tf.reshape(content_loss, [28*28, 512])
-# print content_loss.get_shape()
-
-# content_l = tf.reduce_sum(tf.multiply(content_loss, content_loss))
-
-# print content_l.get_shape()
-
-# print content_acts
-
-# print style_acts
-
-content_loss = 0.5 * tf.reduce_sum(tf.square(tf.subtract(content_layer, orig_content)))
 #
 # --- construct your cost function here
 #
+content_layer = content_acts[8]
+
+orig_content = ops[8]
+
+content_loss = 0.5 * tf.reduce_sum(tf.pow(content_layer - orig_content,2))
 
 # Relevant snippets from the paper:
 #   For the images shown in Fig 2 we matched the content representation on layer 'conv4_2'
@@ -70,20 +51,23 @@ content_loss = 0.5 * tf.reduce_sum(tf.square(tf.subtract(content_layer, orig_con
 style_pos = [0,2,4,7,10]
 style_loss = 0
 for pos in style_pos:
+	
 	style_layer = style_acts[pos]
 	orig_style = ops[pos]
-	style_layer = tf.constant(style_layer)
-	shape = style_layer.get_shape().as_list()
-	gram_sl = tf.reshape(style_layer, [1,shape[1]*shape[2], shape[3]])
-	gram_sl = tf.reshape(gram_sl, [shape[1]*shape[2], shape[3]])
-	gram_sl = tf.matmul(tf.transpose(gram_sl), gram_sl)
+	#style_layer = tf.constant(style_layer)
+	shape = orig_style.get_shape().as_list()
+	#gram_sl = tf.reshape(style_layer, [1,shape[1]*shape[2], shape[3]])
+	gram_sl = style_layer.reshape((shape[1]*shape[2], shape[3]))
+	gram_sl = np.matmul(np.transpose(gram_sl), gram_sl)
 		
-	gram_so = tf.reshape(orig_style, [1, shape[1]*shape[2], shape[3]])
-	gram_so = tf.reshape(gram_so, [shape[1]*shape[2], shape[3]])
+	#gram_so = tf.reshape(orig_style, [1, shape[1]*shape[2], shape[3]])
+	gram_so = tf.reshape(orig_style, [shape[1]*shape[2], shape[3]])
 	gram_so = tf.matmul(tf.transpose(gram_so), gram_so)
 
 	style_loss += (1.0/ (4 * shape[3]**2 * (shape[1]*shape[2])**2 ) ) * tf.reduce_sum(tf.pow(gram_sl - gram_so, 2))
+
 style_loss *= 1.0/5.0
+
 
 alpha = 1.0
 beta = 1e-3
@@ -92,7 +76,7 @@ loss = alpha * content_loss + beta * style_loss
 
 # --- place your adam optimizer call here
 #     (don't forget to optimize only the opt_img variable)
-adam = tf.train.AdamOptimizer(0.1).minimize(loss, var_list=[opt_img])
+train_step = tf.train.AdamOptimizer(.1).minimize(loss , var_list=[opt_img])
 
 # this clobbers all VGG variables, but we need it to initialize the
 # adam stuff, so we reload all of the weights...
@@ -103,8 +87,17 @@ vgg.load_weights( 'vgg16_weights.npz', sess )
 sess.run( opt_img.assign( content_img ))
 
 # --- place your optimization loop here
-for i in range(100000):
-	if i % 1000 == 0:
-		optimze, r_img, l, cl, sl = sess.run([adam, opt_img, loss, content_loss, style_loss])
+for i in range(10000):
+	if i % 100 == 0:
+		r_img = sess.run(opt_img)
+		l = sess.run(loss)
+		cl = sess.run(content_loss)
+		sl = sess.run(style_loss)
 		print i, l, sl, cl
-		imsave('out.png', r_img[0])
+		#print sess.run(orig_content)
+		imsave('a/out.png', r_img[0])
+	
+	sess.run(train_step)
+
+
+
