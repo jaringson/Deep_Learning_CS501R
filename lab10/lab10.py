@@ -2,7 +2,7 @@
 import numpy as np
 import tensorflow as tf
 import vgg16
-from scipy.misc import imread, imresize
+from scipy.misc import imread, imresize, imsave
 
 sess = tf.Session()
 
@@ -74,10 +74,15 @@ for pos in style_pos:
 	orig_style = ops[pos]
 	style_layer = tf.constant(style_layer)
 	shape = style_layer.get_shape().as_list()
-	gram = tf.reshape(style_layer, [1,shape[1]*shape[2], shape[3]])
-	gram = tf.reshape(gram, [shape[1]*shape[2], shape[3]])
-	gram = tf.reduce_sum(tf.multiply(gram, gram))
-	style_loss += (1.0/ (4 * shape[3]**2 * (shape[1]*shape[2])**2 ) ) * tf.reduce_sum(tf.square(tf.subtract(gram, style_img)))
+	gram_sl = tf.reshape(style_layer, [1,shape[1]*shape[2], shape[3]])
+	gram_sl = tf.reshape(gram_sl, [shape[1]*shape[2], shape[3]])
+	gram_sl = tf.matmul(tf.transpose(gram_sl), gram_sl)
+		
+	gram_so = tf.reshape(orig_style, [1, shape[1]*shape[2], shape[3]])
+	gram_so = tf.reshape(gram_so, [shape[1]*shape[2], shape[3]])
+	gram_so = tf.matmul(tf.transpose(gram_so), gram_so)
+
+	style_loss += (1.0/ (4 * shape[3]**2 * (shape[1]*shape[2])**2 ) ) * tf.reduce_sum(tf.pow(gram_sl - gram_so, 2))
 style_loss *= 1.0/5.0
 
 alpha = 1.0
@@ -98,6 +103,8 @@ vgg.load_weights( 'vgg16_weights.npz', sess )
 sess.run( opt_img.assign( content_img ))
 
 # --- place your optimization loop here
-for i in range(100):
-	optimze, r_img, l, cl, sl = sess.run([adam, opt_img, loss, content_loss, style_loss])
-	print i, l, sl, cl
+for i in range(100000):
+	if i % 1000 == 0:
+		optimze, r_img, l, cl, sl = sess.run([adam, opt_img, loss, content_loss, style_loss])
+		print i, l, sl, cl
+		imsave('out.png', r_img[0])
