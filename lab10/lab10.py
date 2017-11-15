@@ -6,6 +6,7 @@ from scipy.misc import imread, imresize
 
 sess = tf.Session()
 
+
 opt_img = tf.Variable( tf.truncated_normal( [1,224,224,3],
                                         dtype=tf.float32,
                                         stddev=1e-1), name='opt_img' )
@@ -33,23 +34,24 @@ ops = [ getattr( vgg, x ) for x in layers ]
 content_acts = sess.run( ops, feed_dict={vgg.imgs: content_img } )
 style_acts = sess.run( ops, feed_dict={vgg.imgs: style_img} )
 
-content_loss = ops[8]
-print content_loss.get_shape()
+content_layer = ops[8]
+# print content_loss.get_shape()
 
-content_loss = tf.reshape(content_loss, [1, 28*28, 512])
-print content_loss.get_shape()
+# content_loss = tf.reshape(content_loss, [1, 28*28, 512])
+# print content_loss.get_shape()
 
-content_loss = tf.reshape(content_loss, [28*28, 512])
-print content_loss.get_shape()
+# content_loss = tf.reshape(content_loss, [28*28, 512])
+# print content_loss.get_shape()
 
-content_l = tf.reduce_sum(tf.multiply(content_loss, content_loss))
+# content_l = tf.reduce_sum(tf.multiply(content_loss, content_loss))
 
-print content_l.get_shape()
+# print content_l.get_shape()
 
 # print content_acts
 
 # print style_acts
 
+content_loss = 0.5 * tf.reduce_sum(tf.square(tf.subtract(content_layer - opt_img)))
 #
 # --- construct your cost function here
 #
@@ -59,10 +61,25 @@ print content_l.get_shape()
 #   and the style representations on layers 'conv1_1', 'conv2_1', 'conv3_1', 'conv4_1' and 'conv5_1'
 #   The ratio alpha/beta was  1x10-3
 #   The factor w_l was always equal to one divided by the number of active layers (ie, 1/5)
+style_pos = [0,2,4,7,10]
+style_loss = 0
+for pos in style_pos:
+	style_layer = ops[pos]
+	shape = style_layer.get_shape().as_list()
+	gram = tf.reshape(style_layer, [1,shape[1]*shape[2], shape[3]])
+	gram = tf.reshape(gram, [shape[1]*shape[2], shape[3]])
+	gram = tf.reduce_sum(tf.multiply(gram, gram))
+	style_loss += (1.0/ (4 * shape[3]**2 * (shape[1]*shape[2])**2 ) ) * tf.reduce_sum(tf.square(tf.subtract(gram - opt_img)))
+style_loss *= 1.0/5.0
+
+alpha = 1.0
+beta = 1e-3
+
+loss = alpha * content_loss + beta * style_loss
 
 # --- place your adam optimizer call here
 #     (don't forget to optimize only the opt_img variable)
-adam = ttf.train.AdamOptimizer().minimize(opt_img)
+adam = tf.train.AdamOptimizer(0.1).minimize(loss)
 
 # this clobbers all VGG variables, but we need it to initialize the
 # adam stuff, so we reload all of the weights...
@@ -73,5 +90,6 @@ vgg.load_weights( 'vgg16_weights.npz', sess )
 sess.run( opt_img.assign( content_img ))
 
 # --- place your optimization loop here
-for _ in range(100):
-	adam.run()
+for i in range(100):
+	r_img, l, cl, sl = adam.run([opt_img, loss, content_loss, style_loss], feed_dict={})
+	print i, l, sl, cl
