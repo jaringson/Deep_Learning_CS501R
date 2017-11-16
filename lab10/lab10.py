@@ -70,7 +70,7 @@ style_loss *= 1.0/5.0
 
 
 alpha = 1.0
-beta = 1e-3
+beta = 1e3
 
 loss = alpha * content_loss + beta * style_loss
 
