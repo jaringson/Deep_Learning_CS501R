@@ -231,14 +231,17 @@ class Encoder(nn.Module):
         return out"""
 
 
-        """ 2nd implementation
-        for i in range(n_timesteps):
+        # 2nd implementation
+        '''for i in range(n_timesteps):
              out, hidden_states = self.GRU(self.embedding[i:i+1], hidden_states) 
              #out, (hidden_states, cell_states) = self.LSTM(self.embedding[i:i+1], (hidden_states, cell_states)) 
         
-        return out """
+        return out'''
         
         # 3rd
+	print source_variable
+	print self.hidden_size 
+	print hidden_states
         return self.GRU(self.embedding(source_variable).view(-1, 1, self.hidden_size), hidden_states)[0][-1]
         #return self.LSTM(self.embedding(source_variable).view(-1, 1, self.hidden_size), \
         #                 (hidden_states, cell_states))[0][-1]
